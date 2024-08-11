@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_iw._tcp</string>
+    </array>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Network usage is required for Windows/iOS communication</string>
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionAttributes</key>
+		<dict>
+            <key>NSExtensionActivationRule</key>
+            <string>
+            SUBQUERY (
+                extensionItems,
+                $extensionItem,
+                    SUBQUERY (
+                        $extensionItem.attachments,
+                        $attachment,
+                        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.file-url"
+                        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.url"
+                        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.plain-text"
+                        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.image"
+                        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.jpeg"
+                        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.png"
+                        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.video"
+                        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.movie"
+                        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "com.apple.quicktime-movie"
+                        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.audio"
+                        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.mp3"
+                        || ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.wav"
+                    ).@count == $extensionItem.attachments.@count
+            ).@count >= 1
+            </string>
+		</dict>
+		<key>NSExtensionPrincipalClass</key>
+		<string>ShareExtension.ShareViewController</string>
+		<key>NSExtensionPointIdentifier</key>
+		<string>com.apple.share-services</string>
+	</dict>
+</dict>
+</plist>
