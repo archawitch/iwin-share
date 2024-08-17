@@ -2,6 +2,12 @@ import SwiftUI
 import Network
 import UniformTypeIdentifiers
 
+struct Service: Identifiable {
+    let id = UUID()
+    let name: String
+    let ipAddr: String
+}
+
 class ShareViewController: UIViewController, NetServiceBrowserDelegate, NetServiceDelegate {
     private let deviceName = UIDevice.current.name
     private let deviceIdentifier = UIDevice.current.identifierForVendor?.uuidString ?? ""
@@ -40,6 +46,10 @@ class ShareViewController: UIViewController, NetServiceBrowserDelegate, NetServi
     private var filesContent: [MultipartFile] = []
     private var urlContent: String = ""
     private var textContent: String = ""
+    
+    
+    // MARK: - FILES OR URL TO BE UPLOADED
+    private var secret: String = ""
     
 
     // MARK: - VIEWDIDLOAD
@@ -247,8 +257,25 @@ class ShareViewController: UIViewController, NetServiceBrowserDelegate, NetServi
                         else if let response = response as? HTTPURLResponse, response.statusCode == 200 {
                             print("Connected to \(hostName) (\(ipAddr))")
                             
-                            // TODO: - Add service to the service list
-                            self.viewModel.addService(name: hostName, ipAddr: ipAddr)
+                            if let responseData = data {
+                                // Example: Decode JSON if you expect JSON response
+                                do {
+                                    if let json = try JSONSerialization.jsonObject(with: responseData, options: []) as? [String: Any] {
+                                        if let secret = json["s"] as? String {
+                                            // TODO: - Add service to the service list
+                                            if let s = self.decodeBase64ToString(base64: secret) {
+                                                print("secret: base64 - \(secret), val - \(s)")
+                                                self.secret = s
+                                                self.viewModel.addService(name: hostName, ipAddr: ipAddr)
+                                            }
+                                        }
+                                    }
+                                } catch {
+                                    print("Failed to decode JSON: \(error.localizedDescription)")
+                                }
+                            } else {
+                                print("No data received")
+                            }
                         } else {
                             print("Failed to connect to the server")
                         }
@@ -317,7 +344,10 @@ class ShareViewController: UIViewController, NetServiceBrowserDelegate, NetServi
                 fields.append(MultipartField(key: "text", value: textContent))
             }
             
-            let request: URLRequest = createMultipartRequest(url: url, fields: fields, files: filesContent)
+            let authValue = encodeStringToBase64(string: "\(deviceIdentifier):\(secret)")
+            let authHeaderValue = "Basic \(authValue)"
+            
+            let request: URLRequest = createMultipartRequest(authHeaderValue: authHeaderValue, url: url, fields: fields, files: filesContent)
             
             URLSession.shared.dataTask(with: request) { data, response, error in
                 completion(data, response, error)
@@ -344,9 +374,12 @@ class ShareViewController: UIViewController, NetServiceBrowserDelegate, NetServi
         return request
     }
     
-    func createMultipartRequest(url: URL, fields: [MultipartField], files: [MultipartFile]) -> URLRequest {
+    func createMultipartRequest(authHeaderValue: String?, url: URL, fields: [MultipartField], files: [MultipartFile]) -> URLRequest {
         let boundary = UUID().uuidString
-        let headers: [String:String] = ["Content-Type": "multipart/form-data; boundary=\(boundary)"]
+        var headers: [String:String] = ["Content-Type": "multipart/form-data; boundary=\(boundary)"]
+        if let auth = authHeaderValue {
+            headers["Authorization"] = auth
+        }
         
         // check if we send a URL or files
         let body: Data = createMultipartBody(boundary: boundary, fields: fields, files: files)
@@ -378,6 +411,20 @@ class ShareViewController: UIViewController, NetServiceBrowserDelegate, NetServi
         body.append("--\(boundary)--\r\n")
         
         return body
+    }
+    
+    
+    // MARK: - BASE^$ CONVERSION
+    func decodeBase64ToString(base64: String) -> String?  {
+        guard let data = Data(base64Encoded: base64) else {
+            return nil
+        }
+        return String(data: data, encoding: .utf8)
+    }
+    
+    func encodeStringToBase64(string: String) -> String  {
+        let data = Data(string.utf8)
+        return data.base64EncodedString()
     }
     
     

@@ -1,11 +1,5 @@
 import SwiftUI
 
-struct Service: Identifiable {
-    let id = UUID()
-    let name: String
-    let ipAddr: String
-}
-
 class ShareExtensionViewModel: ObservableObject {
     @Published var discoveredServices: [Service] = []
 
